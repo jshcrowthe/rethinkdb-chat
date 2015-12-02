@@ -21,3 +21,10 @@ io.sockets.on('connection', function(socket) {
     .then((conn) => r.table('messages').insert(message).run(conn).finally(() => conn.close()));
   });
 });
+
+// Open a change feed to watch the message database and relay any new messages to the clients
+var messages = r.table('messages');
+r.connect({db: 'rethinkdb_chat'}).then(function(conn) {
+  messages.changes().run(conn)
+    .then((cursor) => cursor.each((err, change) => io.sockets.emit('chat message', change.new_val))); 
+});
