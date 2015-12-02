@@ -14,4 +14,10 @@ io.sockets.on('connection', function(socket) {
   .then((conn)   => r.table('messages').orderBy('timestamp').run(conn).finally(() => conn.close()))
   .then((cursor) => cursor.toArray())
   .then((result) => socket.emit('load messages', result));
+
+  // When there are new messages save them in the database
+  socket.on('new message', function(message) {
+    r.connect({db: 'rethinkdb_chat'})
+    .then((conn) => r.table('messages').insert(message).run(conn).finally(() => conn.close()));
+  });
 });
