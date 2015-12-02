@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hello</title>
+  <!-- Viewport Meta/Description -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <h1>RethinkDB Messenger</h1>
+  <template id="messageTemplate">
+    <tr class='message'>
+      <td class="timestamp"></td>
+      <td class="messageText"></td>
+    </tr>
+  </template>
+  
+  <table>
+    <thead>
+      <th>Time</th>
+      <th>Message</th>
+    </thead>
+    <tbody id="messages"></tbody>
+  </table>
+
+  <input id='message' type="text"><button id='sendButton'>Send</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.7/socket.io.min.js"></script>
+  <script>
+    // Keep an array of existing message ids
+    var existingIds = [];
+
+    function formatTime(date) {
+      if (!(date instanceof Date)) date = new Date(date);
+      return date.toLocaleTimeString(navigator.language);
+    }
+
+    function insertMessage(message) {
+      // Check if a message exists
+      if (~existingIds.indexOf(message.id)) return;
+
+      var template = document.querySelector('#messageTemplate');
+      var clone = document.importNode(template.content, true);
+      clone.querySelector('.timestamp').innerHTML = formatTime(message.timestamp);
+      clone.querySelector('.messageText').innerHTML = message.message;
+      existingIds.push(message.id);
+      document.querySelector('#messages').appendChild(clone);
+    }
+
+    var socket = io();
+    var sendButton = document.querySelector('#sendButton');
+    sendButton.addEventListener('click', function() {
+      var el = document.querySelector('#message');
+      if (!el.value) return;
+      socket.emit('new message', {
+        timestamp: new Date().getTime(),
+        message:el.value
+      });
+      el.value = null;
+    });
+
+    socket.on('load messages', function(messages) {
+      messages.forEach(insertMessage);
+    });
+
+    socket.on('chat message', insertMessage);
+  </script>
+</body>
+</html>
